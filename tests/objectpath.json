@@ -10,32 +10,22 @@
             "language": {
                 "type": "string",
                 "title": "Language",
-                "description": "Thank you for your interest in our Advocacy Campaign; if <language> isn’t your language, type (?) to see what other languages we support",
+                "description": "Thank you for your interest in our Campaign; if <language> isn’t your language, type (?) to see what other languages we support",
                 "enum": [
                     "English",
-                    "Spanish",
-                    "English"
-                ],
-                "translations": {
-                    "English": {
-                        "title": "Language",
-                        "enum": [
-                            "Engleish",
-                            "Espanol"
-                        ]
-                    }
-                }
+                    "Spanish"
+                ]
             },
             "agreement-13": {
                 "type": "string",
                 "title": "Opt-In",
-                "description": "Do you want to sign the petition, please note you must be over 13 years old to sign this petition. Type (Y) for yes or (N) for no",
+                "description": "Do you want to sign the petition, please note you must be over 18 years old to sign this petition. Type (Y) for yes or (N) for no",
                 "enum": [
                     "Y",
                     "N"
                 ],
                 "validate": {
-                    "uri": "https://formbot.lndo.site/api/formbot/1/field/select/validate/true",
+                    "uri": "https://example.com/api/formbot/1/field/select/validate/true",
                     "fail": "Invalid select input.",
                     "retry": true,
                     "method": "POST"
@@ -112,18 +102,7 @@
                 "enum": [
                     "Y",
                     "N"
-                ],
-                "twilio": {
-                    "type": "Twilio.ALPHANUMERIC",
-                    "validate": {
-                        "uri": "https://formbot.lndo.site/api/formbot/1/field/select/validate/true",
-                        "fail": {
-                            "say": "Invalid select input."
-                        },
-                        "retry": true,
-                        "method": "POST"
-                    }
-                }
+                ]
             }
         },
         "definitions": {

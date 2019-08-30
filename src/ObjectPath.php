@@ -121,8 +121,8 @@ class ObjectPath implements \JsonSerializable {
     return $this;
   }
 
-  private function getFrom(): string {
-    return (empty($this->from)) ? '' : $this->from . $this->getDelimiter();
+  public function getFrom(): string {
+    return $this->from;
   }
 
   private function setFrom(string $from): self {
@@ -177,11 +177,19 @@ class ObjectPath implements \JsonSerializable {
   }
 
   private function absPath(string $dotquery): string {
-    return $this->getFrom() . $dotquery;
+    $from = (empty($this->getFrom())) ? '' : $this->getFrom() . $this->getDelimiter();
+    return $from . $dotquery;
   }
 
   private function absPathArray(string $dotquery): array {
     return explode($this->getDelimiter(), $this->absPath($dotquery));
+  }
+
+  private function cleanPath(string $dotquery): string {
+    $dotquery = ltrim($dotquery, '$.');
+    $dotquery = ltrim($dotquery, '$');
+    //$dotquery = ltrim($dotquery, $this->getDelimiter() . $this->getDelimiter());
+    return $dotquery;
   }
 
   private function &processPathQuery(string $dotquery) {
@@ -190,7 +198,7 @@ class ObjectPath implements \JsonSerializable {
       return $data;
     }
 
-    $dotquery = ltrim($dotquery, '$.');
+    $dotquery = $this->cleanPath($dotquery);
     $lineage = [];
 
     $paths = $this->absPathArray($dotquery);
