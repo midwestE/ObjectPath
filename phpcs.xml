@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ruleset name="ObjectPath">
+  <description>The coding standards for ObjectPath library.</description>
+
+  <file>src</file>
+
+  <arg name="colors" />
+
+  <rule ref="PSR2">
+  </rule>
+
+  <rule ref="PSR1.Methods.CamelCapsMethodName.NotCamelCaps">
+    <exclude-pattern>*/tests/*Test.php</exclude-pattern>
+  </rule>
+</ruleset>

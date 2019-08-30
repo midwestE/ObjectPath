@@ -1,0 +1,31 @@
+{
+    "name": "midweste/objectpath",
+    "description": "Generic 'dot path' class for accessing and modifying data classes and arrays",
+    "homepage": "https://github.com/midweste/objectpath",
+    "license": "MIT",
+    "keywords": ["json", "jsonpath", "json path", "object path"],
+    "authors": [
+        {
+            "name": "MidwestE",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.2",
+        "phing/phing": "^2.16",
+        "squizlabs/php_codesniffer": "^3.2.0",
+        "infection/infection": "^0.13.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "MidwestE\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+
+        }
+    }
+}
