@@ -3,83 +3,108 @@
 use MidwestE\ObjectPath;
 use PHPUnit\Framework\TestCase;
 
-class ObjectPathTest extends TestCase {
+class ObjectPathTest extends TestCase
+{
 
-  private function objectPath() {
-    $json = file_get_contents(__DIR__ . '/objectpath.json');
-    return new ObjectPath($json);
-  }
+    private function objectPath()
+    {
+        $json = file_get_contents(__DIR__ . '/objectpath.json');
+        return new ObjectPath($json);
+    }
 
-  function testLoading() {
-    $this->assertNotEmpty($this->objectPath()->{'schema'});
-  }
+    public function testLoading()
+    {
+        $this->assertNotEmpty($this->objectPath()->{'schema'});
+    }
 
-  function testDelimiter() {
-    $o = $this->objectPath();
-    $o->setDelimiter('/');
-    $this->assertEquals('/', $o->getDelimiter());
-  }
+    public function testDelimiter()
+    {
+        $o = $this->objectPath();
+        $o->setDelimiter('/');
+        $this->assertEquals('/', $o->getDelimiter());
+    }
 
-  function testToJson() {
-    $o = $this->objectPath();
-    $json = $o->toJson();
-    $this->assertJson($json);
-  }
+    public function testToJson()
+    {
+        $o = $this->objectPath();
+        $json = $o->toJson();
+        $this->assertJson($json);
+    }
 
-  function testReset() {
-    $o = $this->objectPath();
-    $original = $o->toJson();
-    $o->{'schema.properties.language.enum.0'} = 'Test';
-    $after = $o->toJson();
-    $this->assertNotEquals($original, $after);
-    $o->reset();
-    $this->assertEquals($original, $o->toJson());
-  }
+    public function testReset()
+    {
+        $o = $this->objectPath();
+        $original = $o->toJson();
+        $o->{'schema.properties.language.enum.0'} = 'Test';
+        $after = $o->toJson();
+        $this->assertNotEquals($original, $after);
+        $o->reset();
+        $this->assertEquals($original, $o->toJson());
+    }
 
-  function testFrom() {
-    $o = $this->objectPath();
-    $o->from('schema.properties.language');
-    $this->assertEquals('schema.properties.language', $o->getFrom());
-  }
+    public function testFrom()
+    {
+        $o = $this->objectPath();
+        $o->from('schema.properties.language');
+        $this->assertEquals('schema.properties.language', $o->getFrom());
+    }
 
-  function testCopy() {
-    $o = $this->objectPath();
-    $o->from('schema.properties.language');
-    $o->copy('enum', 'enumOriginal');
-    $this->assertEquals($o->{'enum'}, $o->{'enumOriginal'});
-  }
+    public function testCopy()
+    {
+        $o = $this->objectPath();
+        $o->from('schema.properties.language');
+        $o->copy('enum', 'enumOriginal');
+        $this->assertEquals($o->{'enum'}, $o->{'enumOriginal'});
+    }
 
-  function testSetArrayValue() {
-    $o = $this->objectPath();
-    $o->from('schema.properties.language');
-    $o->set('enum.{English}', "ENG");
-    $this->assertEquals($o->{'enum.{English}'}, 'ENG');
-  }
+    public function testSetArrayValue()
+    {
+        $o = $this->objectPath();
+        $o->from('schema.properties.language');
+        $o->set('enum.{English}', "ENG");
+        $this->assertEquals($o->{'enum.{English}'}, 'ENG');
+    }
 
-  function testSetArrayByIndex() {
-    $o = $this->objectPath();
-    $o->from('schema.properties.language');
-    $o->set('enum.0', 'Si');
-    $this->assertEquals($o->{'enum.{0}'}, 'Si');
-  }
+    public function testSetArrayByIndex()
+    {
+        $o = $this->objectPath();
+        $o->from('schema.properties.language');
+        $o->set('enum.0', 'Si');
+        $this->assertEquals($o->{'enum.{0}'}, 'Si');
+    }
 
-  function testAdvancedUsage() {
-    $o = $this->objectPath();
+    public function testAdvancedUsage()
+    {
+        $o = $this->objectPath();
 
-    $o->setDelimiter('/');
-    $this->assertEquals('/', $o->getDelimiter());
+        $o->setDelimiter('/');
+        $this->assertEquals('/', $o->getDelimiter());
 
-    $o->from('schema/properties/language');
-    $this->assertEquals('schema/properties/language', $o->getFrom());
+        $o->from('schema/properties/language');
+        $this->assertEquals('schema/properties/language', $o->getFrom());
 
-    $o->copy('enum', 'enumOriginal');
-    $this->assertEquals($o->{'enum'}, $o->{'enumOriginal'});
+        $o->copy('enum', 'enumOriginal');
+        $this->assertEquals($o->{'enum'}, $o->{'enumOriginal'});
 
-    $o->set('enum/{English}', "ENG");
-    $this->assertEquals($o->{'enum/{English}'}, 'ENG');
+        $o->set('enum/{English}', "ENG");
+        $this->assertEquals($o->{'enum/{English}'}, 'ENG');
 
-    $o->set('enum/0', 'Si');
-    $this->assertEquals($o->{'enum/{0}'}, 'Si');
-  }
+        $o->set('enum/0', 'Si');
+        $this->assertEquals($o->{'enum/{0}'}, 'Si');
+    }
 
+    public function testMagicEmptyIsset()
+    {
+        $o = $this->objectPath();
+        $enum = $o->{'schema.properties.language.enum'};
+        $this->assertIsArray($enum);
+        // empty tests
+        $this->assertEquals(empty($enum), empty($o->{'schema.properties.language.enum'}));
+        $this->assertFalse(empty($o->{'schema.properties.language.enum'}));
+        $this->assertTrue(empty($o->{'schema.properties.language.fake'}));
+        // isset tests
+        $this->assertEquals(isset($enum), isset($o->{'schema.properties.language.enum'}));
+        $this->assertTrue(isset($o->{'schema.properties.language.enum'}));
+        $this->assertFalse(isset($o->{'schema.properties.language.fake'}));
+    }
 }
