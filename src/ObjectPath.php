@@ -24,9 +24,9 @@ class ObjectPath implements \JsonSerializable
 
     public function __construct($mixed)
     {
-        $this->setData($mixed);
         $this->setDelimiter('.');
         $this->setFrom('');
+        $this->setData($mixed);
     }
 
     /**
