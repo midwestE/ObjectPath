@@ -64,7 +64,7 @@ class ObjectPath implements \JsonSerializable
      *
      * @return (false|mixed)
      */
-    public function __get(string $jsonPath)
+    public function &__get(string $jsonPath)
     {
         return $this->get($jsonPath);
     }
@@ -307,10 +307,9 @@ class ObjectPath implements \JsonSerializable
      * @param  string $path
      * @return mixed
      */
-    public function get(string $path)
+    public function &get(string $path)
     {
-        $data = $this->processPathQuery($path);
-        return $data;
+        return $this->processPathQuery($path);
     }
 
     /**
@@ -324,6 +323,7 @@ class ObjectPath implements \JsonSerializable
     {
         $data = &$this->processPathQuery($path);
         $data = $value;
+        $this->onAfterSet($data);
         return $this;
     }
 
@@ -394,6 +394,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function unset(string $path): self
     {
+
         $this->processPathQuery($path);
         $parent = &$this->parentElement();
 
@@ -407,6 +408,7 @@ class ObjectPath implements \JsonSerializable
         } else {
             unset($parent->{$key});
         }
+        $this->onAfterUnset($path, $parent);
         return $this;
     }
 
@@ -460,4 +462,14 @@ class ObjectPath implements \JsonSerializable
     {
         return $this->getWorking();
     }
+
+    /**
+     * Hooks
+     */
+
+    protected function onAfterSet($data)
+    { }
+
+    protected function onAfterUnset($path, $parent)
+    { }
 }
