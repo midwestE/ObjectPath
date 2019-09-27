@@ -282,12 +282,16 @@ class ObjectPath implements \JsonSerializable
 
     /**
      * Return the parent element of the working path
-     *
+     * TODO Deprecate in 1.0
      * @return mixed
      */
     public function &parentElement()
     {
         $lineage = &$this->getLineage();
+        if (count($lineage) == 1) {
+            return $lineage[key($lineage)];
+        }
+
         $parentIndex = count($lineage) - 2;
         $currentIndex = 0;
         $parent = null;
