@@ -107,4 +107,17 @@ class ObjectPathTest extends TestCase
         $this->assertTrue(isset($o->{'schema.properties.language.enum'}));
         $this->assertFalse(isset($o->{'schema.properties.language.fake'}));
     }
+
+    public function testParent()
+    {
+        $o = $this->objectPath();
+        // test parent return parent when no parents exist
+        $child = $o->{'form'};
+        $parent = $o->getParent('form');
+        $this->assertSame($child, $parent);
+        // test parent
+        $child = $o->getParent('schema.properties.language.enum');
+        $parent = $o->{'schema.properties.language'};
+        $this->assertSame($child, $parent);
+    }
 }
