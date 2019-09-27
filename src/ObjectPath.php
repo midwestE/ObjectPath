@@ -285,9 +285,8 @@ class ObjectPath implements \JsonSerializable
      *
      * @return mixed
      */
-    public function &getParent(string $path)
+    public function &parentElement()
     {
-        $this->processPathQuery($path);
         $lineage = &$this->getLineage();
         $parentIndex = count($lineage) - 2;
         $currentIndex = 0;
@@ -300,6 +299,18 @@ class ObjectPath implements \JsonSerializable
             $currentIndex++;
         }
         return $parent;
+    }
+
+    /**
+     * Return the parent element at the given path
+     *
+     * @param string $path
+     * @return mixed
+     */
+    public function &getParent(string $path)
+    {
+        $this->processPathQuery($path);
+        return $this->parentElement();
     }
 
     /**
