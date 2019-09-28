@@ -13,7 +13,6 @@ namespace MidwestE;
  */
 class ObjectPath implements \JsonSerializable
 {
-
     private $json;
     private $working;
     private $delimiter;
@@ -63,37 +62,37 @@ class ObjectPath implements \JsonSerializable
      * Syntactic sugar for get() method. The starting '$' is not needed (implicit)
      * Usage: $obj->{'.json.path'} or $obj->{'json.path'};
      *
-     * @param string $jsonPath jsonPath
+     * @param string $pathQuery jsonPath
      *
      * @return (false|mixed)
      */
-    public function &__get(string $jsonPath)
+    public function &__get(string $pathQuery)
     {
-        return $this->get($jsonPath);
+        return $this->get($pathQuery);
     }
 
     /**
      * Syntactic sugar for set() method. The starting '$' is not needed (implicit)
      * Usage: $obj->{'.json.path'} = $value or $obj->{'json.path'} = $value;
      *
-     * @param string $jsonPath jsonPath
+     * @param string $pathQuery jsonPath
      * @param mixed  $value    value
      *
      * @return JsonObject
      */
-    public function __set(string $jsonPath, $value): self
+    public function __set(string $pathQuery, $value): self
     {
-        return $this->set($jsonPath, $value, false);
+        return $this->set($pathQuery, $value, false);
     }
     /**
      * Magic method isset
      *
-     * @param  string $jsonPath
+     * @param  string $pathQuery
      * @return boolean
      */
-    public function __isset(string $jsonPath): bool
+    public function __isset(string $pathQuery): bool
     {
-        return $this->exists($jsonPath);
+        return $this->exists($pathQuery);
     }
 
     /**
@@ -162,7 +161,7 @@ class ObjectPath implements \JsonSerializable
     }
 
     /**
-     * Set the root symbol used for path queries
+     * Set the root symbol used for path queries (default $)
      *
      * @param  string $symbol
      * @return \self
@@ -189,9 +188,9 @@ class ObjectPath implements \JsonSerializable
         return $this->path;
     }
 
-    private function setPath(array $path): self
+    private function setPath(array $pathArray): self
     {
-        $this->path = $path;
+        $this->path = $pathArray;
         return $this;
     }
 
@@ -225,22 +224,22 @@ class ObjectPath implements \JsonSerializable
     /**
      * Test if a query value is cached
      *
-     * @param string $query
+     * @param string $pathQuery
      * @return boolean
      */
-    public function isCached(string $query): bool
+    public function isCached(string $pathQuery): bool
     {
-        return isset($this->cache[$query]);
+        return isset($this->cache[$pathQuery]);
     }
 
-    private function &getCache(string $query)
+    private function &getCache(string $pathQuery)
     {
-        return $this->cache[$query];
+        return $this->cache[$pathQuery];
     }
 
-    private function setCache(string $query, &$data): self
+    private function setCache(string $pathQuery, &$data): self
     {
-        $this->cache[$query] = &$data;
+        $this->cache[$pathQuery] = &$data;
         return $this;
     }
 
@@ -268,39 +267,39 @@ class ObjectPath implements \JsonSerializable
         return $this;
     }
 
-    private function absPath(string $dotquery): string
+    private function absPath(string $pathQuery): string
     {
         $from = (empty($this->getFrom())) ? '' : $this->getFrom() . $this->getDelimiter();
-        return $from . $dotquery;
+        return $from . $pathQuery;
     }
 
-    private function absPathArray(string $dotquery): array
+    private function absPathArray(string $pathQuery): array
     {
-        return explode($this->getDelimiter(), $this->absPath($dotquery));
+        return explode($this->getDelimiter(), $this->absPath($pathQuery));
     }
 
-    private function cleanQuery(string $dotquery): string
+    private function cleanQuery(string $pathQuery): string
     {
-        $dotquery = ltrim($dotquery, $this->getRootSymbol() . $this->getDelimiter());
-        $dotquery = ltrim($dotquery, $this->getRootSymbol());
-        $dotquery = trim($dotquery);
-        return $dotquery;
+        $pathQuery = ltrim($pathQuery, $this->getRootSymbol() . $this->getDelimiter());
+        $pathQuery = ltrim($pathQuery, $this->getRootSymbol());
+        $pathQuery = trim($pathQuery);
+        return $pathQuery;
     }
 
-    private function &processPathQuery(string $dotquery)
+    private function &processPathQuery(string $pathQuery)
     {
-        $dotquery = $this->cleanQuery($dotquery);
-        if ($this->isCached($dotquery)) {
+        $pathQuery = $this->cleanQuery($pathQuery);
+        if ($this->isCached($pathQuery)) {
             $this->setExists(true);
-            return $this->getCache($dotquery);
+            return $this->getCache($pathQuery);
         }
 
         $data = $this->getWorking();
-        if ($dotquery === '') {
+        if ($pathQuery === '') {
             return $data;
         }
 
-        $paths = $this->absPathArray($dotquery);
+        $paths = $this->absPathArray($pathQuery);
         $this->setPath($paths);
 
         $absPath = null;
@@ -329,7 +328,7 @@ class ObjectPath implements \JsonSerializable
         }
         $this->setLineage($lineage);
         $this->setExists($exists);
-        $this->setCache($dotquery, $data);
+        $this->setCache($pathQuery, $data);
         return $data;
     }
 
@@ -365,41 +364,41 @@ class ObjectPath implements \JsonSerializable
     /**
      * Return the parent element at the given path
      *
-     * @param string $path
+     * @param string $pathQuery
      * @return mixed
      */
-    public function &getParent(string $path)
+    public function &getParent(string $pathQuery)
     {
-        $this->processPathQuery($path);
+        $this->processPathQuery($pathQuery);
         return $this->parentElement();
     }
 
     /**
      * Return the value of an element at the given path
      *
-     * @param  string $path
+     * @param  string $pathQuery
      * @return mixed
      */
-    public function &get(string $path)
+    public function &get(string $pathQuery)
     {
-        return $this->processPathQuery($path);
+        return $this->processPathQuery($pathQuery);
     }
 
     /**
      * Set the value of an element at the given path
      *
-     * @param  string $path
+     * @param  string $pathQuery
      * @param  mixed  $value
      * @param  bool $mustExist
      * @return \self
      */
-    public function set(string $path, $value, bool $mustExist = false): self
+    public function set(string $pathQuery, $value, bool $mustExist = false): self
     {
-        if ($mustExist && !$this->exists($path)) {
-            throw new \Exception('Path ' . $path . ' must exist');
+        if ($mustExist && !$this->exists($pathQuery)) {
+            throw new \Exception('Path ' . $pathQuery . ' must exist');
         }
 
-        $data = &$this->processPathQuery($path);
+        $data = &$this->processPathQuery($pathQuery);
         $data = $value;
         $this->onAfterSet($data);
         return $this;
@@ -409,12 +408,12 @@ class ObjectPath implements \JsonSerializable
      * Check if an object element exists at the given path
      * TODO Fix exists check adding to object if item doesn't exist
      *
-     * @param  string $path
+     * @param  string $pathQuery
      * @return bool
      */
-    public function exists(string $path): bool
+    public function exists(string $pathQuery): bool
     {
-        $this->processPathQuery($path);
+        $this->processPathQuery($pathQuery);
         return $this->getExists();
     }
 
@@ -434,12 +433,12 @@ class ObjectPath implements \JsonSerializable
     /**
      * Set the base path for all further commands to use
      *
-     * @param  string $path
+     * @param  string $rootPath
      * @return \self
      */
-    public function from(string $path): self
+    public function from(string $rootPath): self
     {
-        $this->setFrom($path);
+        $this->setFrom($rootPath);
         return $this;
     }
 
@@ -467,13 +466,12 @@ class ObjectPath implements \JsonSerializable
     /**
      * Remove an object property/array item based on path
      *
-     * @param  string $path
+     * @param  string $pathQuery
      * @return \self
      */
-    public function unset(string $path): self
+    public function unset(string $pathQuery): self
     {
-
-        $parent = &$this->getParent($path);
+        $parent = &$this->getParent($pathQuery);
 
         $keys = explode($this->getDelimiter(), $this->pathIndex());
         $key = $keys[count($keys) - 1];
@@ -485,7 +483,7 @@ class ObjectPath implements \JsonSerializable
         } else {
             unset($parent->{$key});
         }
-        $this->onAfterUnset($path, $parent);
+        $this->onAfterUnset($pathQuery, $parent);
         return $this;
     }
 
