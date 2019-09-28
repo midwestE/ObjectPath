@@ -6,10 +6,14 @@ use PHPUnit\Framework\TestCase;
 class ObjectPathTest extends TestCase
 {
 
+    private function jsonData()
+    {
+        return file_get_contents(__DIR__ . '/objectpath.json');
+    }
+
     private function objectPath()
     {
-        $json = file_get_contents(__DIR__ . '/objectpath.json');
-        return new ObjectPath($json);
+        return new ObjectPath($this->jsonData());
     }
 
     public function testLoading()
@@ -55,6 +59,50 @@ class ObjectPathTest extends TestCase
         $o->from('schema.properties.language');
         $o->copy('enum', 'enumOriginal');
         $this->assertEquals($o->{'enum'}, $o->{'enumOriginal'});
+    }
+
+    public function testSet()
+    {
+        $o = $this->objectPath();
+
+        $object = new \stdClass;
+        $object->array = [
+            1 => 'int',
+            '2' => 'string'
+        ];
+
+        $o->set('enum', $object);
+        $enum = $o->get('enum');
+        $this->assertSame($enum, $object);
+
+        $o->{'form'} = $object;
+        $form = $o->{'form'};
+        $this->assertSame($form, $enum);
+    }
+
+    public function testMagicGetSet()
+    {
+        $o = $this->objectPath();
+
+        $object = new \stdClass;
+        $object->array = [
+            1 => 'int',
+            '2' => 'string'
+        ];
+
+        $o->set('enum', $object);
+        $enum = $o->get('enum');
+        $o->{'form'} = $object;
+        $form = $o->{'form'};
+        $this->assertSame($enum, $form);
+    }
+
+    public function testSetMustExist()
+    {
+        $o = $this->objectPath();
+
+        $this->expectException(\Throwable::class);
+        $o->set('fakekey', 'value', true);
     }
 
     public function testSetArrayValue()
@@ -119,5 +167,37 @@ class ObjectPathTest extends TestCase
         $child = $o->getParent('schema.properties.language.enum');
         $parent = $o->{'schema.properties.language'};
         $this->assertSame($child, $parent);
+    }
+
+    public function testRootSymbol()
+    {
+        $o = $this->objectPath();
+        // test with and without symbol match
+        $wSymbol = $o->{'$.form'};
+        $woSymbol = $o->{'form'};
+        $this->assertSame($wSymbol, $woSymbol);
+        // change symbol and test against previous results
+        $o->setRootSymbol('#');
+        $newRootSymbol = $o->{'#.form'};
+        $this->assertSame($wSymbol, $newRootSymbol);
+        $this->assertSame($woSymbol, $newRootSymbol);
+        // change symbol and delimiter maintain equality
+        $o->setDelimiter('/');
+        $newRootAndDelmiter = $o->{'#/form'};
+        $this->assertSame($wSymbol, $newRootAndDelmiter);
+        $this->assertSame($woSymbol, $newRootAndDelmiter);
+    }
+
+    public function testCache()
+    {
+        $o = $this->objectPath();
+        $form = $o->{'form'};
+        $this->assertTrue($o->isCached('form'));
+        $schema = $o->{'schema'};
+        $this->assertTrue($o->isCached('schema'));
+        $this->assertTrue($o->isCached('form'));
+
+        $o->setData($this->jsonData());
+        $this->assertFalse($o->isCached('form'));
     }
 }
