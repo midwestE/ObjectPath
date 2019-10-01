@@ -199,5 +199,11 @@ class ObjectPathTest extends TestCase
 
         $o->setData($this->jsonData());
         $this->assertFalse($o->isCached('form'));
+
+        // test cache is removed on unset
+        $properties = $o->{'schema.properties'};
+        $this->assertTrue($o->isCached('schema.properties'));
+        $o->unset('schema.properties');
+        $this->assertFalse($o->isCached('schema.properties'));
     }
 }

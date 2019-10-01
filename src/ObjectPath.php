@@ -243,6 +243,14 @@ class ObjectPath implements \JsonSerializable
         return $this;
     }
 
+    private function unsetCache(string $query): self
+    {
+        if ($this->isCached($query)) {
+            unset($this->cache[$query]);
+        }
+        return $this;
+    }
+
     private function resetCache(): self
     {
         $this->cache = [];
@@ -369,7 +377,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function &getParent(string $pathQuery)
     {
-        $this->processPathQuery($pathQuery);
+        $this->processPathQuery($this->cleanQuery($pathQuery));
         return $this->parentElement();
     }
 
@@ -381,7 +389,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function &get(string $pathQuery)
     {
-        return $this->processPathQuery($pathQuery);
+        return $this->processPathQuery($this->cleanQuery($pathQuery));
     }
 
     /**
@@ -394,6 +402,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function set(string $pathQuery, $value, bool $mustExist = false): self
     {
+        $pathQuery = $this->cleanQuery($pathQuery);
         if ($mustExist && !$this->exists($pathQuery)) {
             throw new \Exception('Path ' . $pathQuery . ' must exist');
         }
@@ -413,7 +422,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function exists(string $pathQuery): bool
     {
-        $this->processPathQuery($pathQuery);
+        $this->processPathQuery($this->cleanQuery($pathQuery));
         return $this->getExists();
     }
 
@@ -471,6 +480,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function unset(string $pathQuery): self
     {
+        $pathQuery = $this->cleanQuery($pathQuery);
         $parent = &$this->getParent($pathQuery);
 
         $keys = explode($this->getDelimiter(), $this->pathIndex());
@@ -483,6 +493,7 @@ class ObjectPath implements \JsonSerializable
         } else {
             unset($parent->{$key});
         }
+        $this->unsetCache($pathQuery);
         $this->onAfterUnset($pathQuery, $parent);
         return $this;
     }
