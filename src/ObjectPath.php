@@ -330,6 +330,7 @@ class ObjectPath implements \JsonSerializable
             } else {
                 $exists = false;
                 $data = null;
+                unset($data);
             }
             $absPath = (!empty($absPath)) ? $absPath . $this->getDelimiter() . $path : $path;
             $lineage[$absPath] = &$data;
