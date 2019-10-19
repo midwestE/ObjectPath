@@ -110,7 +110,15 @@ class ObjectPathTest extends TestCase
         $o = $this->objectPath();
         $o->from('schema.properties.language');
         $o->set('enum.{English}', "ENG");
-        $this->assertEquals($o->{'enum.{English}'}, 'ENG');
+        $this->assertEquals($o->{'enum.0'}, 'ENG');
+        $this->assertEquals($o->{'enum.{ENG}'}, 'ENG');
+        $this->assertFalse($o->exists('enum.{English}'));
+
+        // test array by value set is removed from cache and no longer exists
+        $o->set('enum.{ENG}', "Spanish");
+        $this->assertFalse($o->exists('enum.{ENG}'));
+        $this->assertFalse($o->isCached('enum.{ENG}'));
+        $this->assertEmpty($o->{'enum.{ENG}'});
     }
 
     public function testSetArrayByIndex()
@@ -118,7 +126,9 @@ class ObjectPathTest extends TestCase
         $o = $this->objectPath();
         $o->from('schema.properties.language');
         $o->set('enum.0', 'Si');
-        $this->assertEquals($o->{'enum.{0}'}, 'Si');
+        $this->assertEquals($o->{'enum.0'}, 'Si');
+        $this->assertEquals($o->{'enum.{Si}'}, 'Si');
+        $this->assertFalse($o->exists('enum.{English}'));
     }
 
     public function testAdvancedUsage()
@@ -135,10 +145,10 @@ class ObjectPathTest extends TestCase
         $this->assertEquals($o->{'enum'}, $o->{'enumOriginal'});
 
         $o->set('enum/{English}', "ENG");
-        $this->assertEquals($o->{'enum/{English}'}, 'ENG');
+        $this->assertEquals($o->{'enum/{ENG}'}, 'ENG');
 
         $o->set('enum/0', 'Si');
-        $this->assertEquals($o->{'enum/{0}'}, 'Si');
+        $this->assertEquals($o->{'enum/0'}, 'Si');
     }
 
     public function testMagicEmptyIsset()
@@ -160,11 +170,19 @@ class ObjectPathTest extends TestCase
     {
         $o = $this->objectPath();
         // test parent return parent when no parents exist
-        $child = $o->{'form'};
-        $parent = $o->getParent('form');
+        $child = $o->{'$'};
+        $parent = $o->parent('$');
+        $this->assertSame($child, $parent);
+        // test parent return parent when no parents exist
+        $child = $o->{'.'};
+        $parent = $o->parent('$');
+        $this->assertSame($child, $parent);
+        // test parent return parent when no parents exist
+        $child = $o->{''};
+        $parent = $o->parent('$');
         $this->assertSame($child, $parent);
         // test parent
-        $child = $o->getParent('schema.properties.language.enum');
+        $child = $o->parent('schema.properties.language.enum');
         $parent = $o->{'schema.properties.language'};
         $this->assertSame($child, $parent);
     }
@@ -207,41 +225,56 @@ class ObjectPathTest extends TestCase
         $this->assertFalse($o->isCached('schema.properties'));
     }
 
+    public function testUnset()
+    {
+        $o = $this->objectPath();
+        $o->unset('schema.properties.language.enum');
+        $this->assertFalse($o->exists('schema.properties.language.enum'));
+        $o->unset('schema.properties.language');
+        $this->assertFalse($o->exists('schema.properties.language'));
+        $o->unset('schema.properties');
+        $this->assertFalse($o->exists('schema.properties'));
+        $o->unset('schema');
+        $this->assertFalse($o->exists('schema'));
+        $o->unset('$');
+        $this->assertFalse($o->exists('$'));
+    }
+
     public function testReferenceUnset()
     {
         $o = $this->objectPath();
 
         // cache items
-        $null1 = $o->{'null.value1'};
-        $null2 = $o->{'null.value2'};
+        $null1 = $o->{'schema.value1'};
+        $null2 = $o->{'schema.value2'};
         $this->assertSame($null1, $null2);
 
         // set items and make sure null reference is detached
-        $o->{'null.value1'} = 'value1';
-        $o->{'null.value2'} = 'value2';
-        $this->assertNotSame($o->{'null.value1'}, $o->{'null.value2'});
+        $o->{'schema.value1'} = 'value1';
+        $o->{'schema.value2'} = 'value2';
+        $this->assertNotSame($o->{'schema.value1'}, $o->{'schema.value2'});
 
         // set value1 to value2
-        $o->{'null.value1'} = $o->{'null.value2'};
-        $this->assertEquals('value2', $o->{'null.value1'});
+        $o->{'schema.value1'} = $o->{'schema.value2'};
+        $this->assertEquals('value2', $o->{'schema.value1'});
 
         // set new value2 and make sure value1 is unchanged
-        $o->{'null.value2'} = 'new2';
-        $this->assertEquals('value2', $o->{'null.value1'});
+        $o->{'schema.value2'} = 'new2';
+        $this->assertEquals('value2', $o->{'schema.value1'});
 
         // copy
-        $o->copy('null.value2', 'null.value1');
-        $this->assertSame($o->{'null.value1'}, $o->{'null.value2'});
-        $o->{'null.value2'} = 'aftercopy';
-        $this->assertEquals('new2', $o->{'null.value1'});
+        $o->copy('schema.value2', 'schema.value1');
+        $this->assertSame($o->{'schema.value1'}, $o->{'schema.value2'});
+        $o->{'schema.value2'} = 'aftercopy';
+        $this->assertEquals('new2', $o->{'schema.value1'});
 
         // set to object
-        $o->{'null.value2'} = new \stdClass();
-        $this->assertIsNotObject($o->{'null.value1'});
+        $o->{'schema.value2'} = new \stdClass();
+        $this->assertIsNotObject($o->{'schema.value1'});
 
         // set to array
-        $o->{'null.value2'} = [];
-        $o->{'null.value2'}['key'] = 'value';
-        $this->assertIsNotArray($o->{'null.value1'});
+        $o->{'schema.value2'} = [];
+        $o->{'schema.value2'}['key'] = 'value';
+        $this->assertIsNotArray($o->{'schema.value1'});
     }
 }

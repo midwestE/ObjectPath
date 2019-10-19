@@ -18,8 +18,6 @@ class ObjectPath implements \JsonSerializable
     private $delimiter;
     private $rootSymbol;
     private $from;
-    private $path;
-    private $lineage;
     private $exists;
     private $cache = [];
 
@@ -183,33 +181,6 @@ class ObjectPath implements \JsonSerializable
         return $this;
     }
 
-    private function getPath(): array
-    {
-        return $this->path;
-    }
-
-    private function setPath(array $pathArray): self
-    {
-        $this->path = $pathArray;
-        return $this;
-    }
-
-    /**
-     * Return an array of the path lineage elements
-     *
-     * @return array
-     */
-    private function &getLineage(): array
-    {
-        return $this->lineage;
-    }
-
-    private function setLineage($data): self
-    {
-        $this->lineage = $data;
-        return $this;
-    }
-
     private function getExists(): bool
     {
         return $this->exists;
@@ -281,11 +252,6 @@ class ObjectPath implements \JsonSerializable
         return $from . $pathQuery;
     }
 
-    private function absPathArray(string $pathQuery): array
-    {
-        return explode($this->getDelimiter(), $this->absPath($pathQuery));
-    }
-
     private function cleanQuery(string $pathQuery): string
     {
         $pathQuery = ltrim($pathQuery, $this->getRootSymbol() . $this->getDelimiter());
@@ -294,9 +260,13 @@ class ObjectPath implements \JsonSerializable
         return $pathQuery;
     }
 
-    private function &processPathQuery(string $pathQuery)
+    private function &processPathQuery(string $pathQuery, $set = false)
     {
-        $pathQuery = $this->cleanQuery($pathQuery);
+        $absPath = $this->absPath($pathQuery);
+        $pathQuery = $this->cleanQuery($absPath);
+
+        $this->setExists(false);
+
         if ($this->isCached($pathQuery)) {
             $this->setExists(true);
             return $this->getCache($pathQuery);
@@ -307,80 +277,57 @@ class ObjectPath implements \JsonSerializable
             return $data;
         }
 
-        $paths = $this->absPathArray($pathQuery);
-        $this->setPath($paths);
-
-        $absPath = null;
-        $lineage = [];
-        foreach ($paths as $pathPosition => $path) {
+        $paths = explode($this->getDelimiter(), $pathQuery);
+        $workingPaths = [];
+        $null = null;
+        foreach ($paths as $path) {
             $exists = false;
             if (is_array($data)) {
-                // by array value
                 if (!isset($data[$path]) && substr($path, 0, 1) == '{' && substr($path, -1) == '}') {
+                    // by array value
                     $path = array_search(str_replace(['{', '}'], '', $path), $data);
                     $exists = ($path !== false);
+                    if (!$exists && !$set) {
+                        $this->setExists(false);
+                        return $null;
+                    }
                     $data = &$data[$path];
-                } else { // by array index
+                    $exists = false;  // item no longer exists after being set
+                } else {
+                    // by array index
                     $exists = isset($data[$path]);
+                    if (!$exists && !$set) {
+                        $this->setExists(false);
+                        return $null;
+                    }
                     $data = &$data[$path];
                 }
-            } elseif (is_object($data)) { // by object property
+            } elseif (is_object($data)) {
+                // by object property
                 $exists = isset($data->{$path});
+                if (!$exists && !$set) {
+                    $this->setExists(false);
+                    return $null;
+                }
                 $data = &$data->{$path};
             } else {
-                $exists = false;
-                $data = null;
-                unset($data);
+                $this->setExists(false);
+                return $null;
             }
-            $absPath = (!empty($absPath)) ? $absPath . $this->getDelimiter() . $path : $path;
-            $lineage[$absPath] = &$data;
+            $this->setExists($exists);
+
+            $workingPaths[] = $path;
+            $workingPath = implode($this->getDelimiter(), $workingPaths);
+            ($exists) ? $this->setCache($workingPath, $data) : $this->unsetCache($workingPath);
         }
-        $this->setLineage($lineage);
-        $this->setExists($exists);
-        $this->setCache($pathQuery, $data);
+        //$this->setExists($exists);
+        //($exists) ? $this->setCache($pathQuery, $data) : $this->unsetCache($pathQuery);
         return $data;
     }
 
     /**
      * API
      */
-
-    /**
-     * Return the parent element of the working path
-     * TODO Deprecate in 1.0
-     * @return mixed
-     */
-    public function &parentElement()
-    {
-        $lineage = &$this->getLineage();
-        if (count($lineage) == 1) {
-            return $lineage[key($lineage)];
-        }
-
-        $parentIndex = count($lineage) - 2;
-        $currentIndex = 0;
-        $parent = null;
-        foreach ($lineage as &$element) {
-            if ($currentIndex === $parentIndex) {
-                $parent = &$element;
-                break;
-            }
-            $currentIndex++;
-        }
-        return $parent;
-    }
-
-    /**
-     * Return the parent element at the given path
-     *
-     * @param string $pathQuery
-     * @return mixed
-     */
-    public function &getParent(string $pathQuery)
-    {
-        $this->processPathQuery($this->cleanQuery($pathQuery));
-        return $this->parentElement();
-    }
 
     /**
      * Return the value of an element at the given path
@@ -408,7 +355,7 @@ class ObjectPath implements \JsonSerializable
             throw new \Exception('Path ' . $pathQuery . ' must exist');
         }
 
-        $data = &$this->processPathQuery($pathQuery);
+        $data = &$this->processPathQuery($pathQuery, true);
         $data = $value;
         $this->onAfterSet($data);
         return $this;
@@ -453,27 +400,6 @@ class ObjectPath implements \JsonSerializable
     }
 
     /**
-     * Return the path index of the currently selected item
-     *
-     * @return string Index path of current item
-     */
-    public function pathIndex(): string
-    {
-        $pathIndex = key(array_slice($this->getLineage(), -1, 1, true));
-        return $pathIndex;
-    }
-
-    /**
-     * Return an array of path elements and values keyed by path value
-     *
-     * @return array Array of path elements and values
-     */
-    public function &lineage(): array
-    {
-        return $this->getLineage();
-    }
-
-    /**
      * Remove an object property/array item based on path
      *
      * @param  string $pathQuery
@@ -482,10 +408,14 @@ class ObjectPath implements \JsonSerializable
     public function unset(string $pathQuery): self
     {
         $pathQuery = $this->cleanQuery($pathQuery);
-        $parent = &$this->getParent($pathQuery);
+        if ($pathQuery === '') {
+            $this->setData(null);
+        }
 
-        $keys = explode($this->getDelimiter(), $this->pathIndex());
-        $key = $keys[count($keys) - 1];
+        $parent = &$this->parent($pathQuery);
+
+        $pathParts = explode($this->getDelimiter(), $pathQuery);
+        $key = $pathParts[count($pathParts) - 1];
         if (is_array($parent)) {
             unset($parent[$key]);
             // have to renumber array for json otherwise turns array to object
@@ -500,14 +430,31 @@ class ObjectPath implements \JsonSerializable
     }
 
     /**
-     * Return the current path
+     * Return the parent element at the given path
      *
+     * @param string $pathQuery
+     * @return mixed
+     */
+    public function &parent(string $pathQuery)
+    {
+        return $this->processPathQuery($this->parentPath($pathQuery));
+    }
+
+    /**
+     * Return the path of the parent element
+     *
+     * @param string $pathQuery
      * @return string
      */
-    public function path(): string
+    public function parentPath(string $pathQuery): string
     {
-        $path = implode($this->getDelimiter(), $this->getPath());
-        return $path;
+        $parentParts = explode($this->getDelimiter(), $this->cleanQuery($pathQuery));
+        $elementCount = count($parentParts);
+        if ($elementCount == 1) {
+            return $this->getRootSymbol();
+        }
+        unset($parentParts[$elementCount - 1]);
+        return implode($this->getDelimiter(), $parentParts);
     }
 
     /**
