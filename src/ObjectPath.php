@@ -249,11 +249,13 @@ class ObjectPath implements \JsonSerializable
     private function absPath(string $pathQuery): string
     {
         $from = (empty($this->getFrom())) ? '' : $this->getFrom() . $this->getDelimiter();
-        return $from . $pathQuery;
+        $fromApplied = (substr_compare($pathQuery, $from, 0, strlen($from)) === 0) ? true : false;
+        return ($fromApplied) ? $pathQuery : $from . $pathQuery;
     }
 
-    private function cleanQuery(string $pathQuery): string
+    private function normalizePath(string $pathQuery): string
     {
+        $pathQuery = $this->absPath($pathQuery);
         $pathQuery = ltrim($pathQuery, $this->getRootSymbol() . $this->getDelimiter());
         $pathQuery = ltrim($pathQuery, $this->getRootSymbol());
         $pathQuery = trim($pathQuery);
@@ -262,8 +264,7 @@ class ObjectPath implements \JsonSerializable
 
     private function &processPathQuery(string $pathQuery, $set = false)
     {
-        $absPath = $this->absPath($pathQuery);
-        $pathQuery = $this->cleanQuery($absPath);
+        $pathQuery = $this->normalizePath($pathQuery);
 
         $this->setExists(false);
 
@@ -337,7 +338,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function &get(string $pathQuery)
     {
-        return $this->processPathQuery($this->cleanQuery($pathQuery));
+        return $this->processPathQuery($pathQuery);
     }
 
     /**
@@ -350,7 +351,6 @@ class ObjectPath implements \JsonSerializable
      */
     public function set(string $pathQuery, $value, bool $mustExist = false): self
     {
-        $pathQuery = $this->cleanQuery($pathQuery);
         if ($mustExist && !$this->exists($pathQuery)) {
             throw new \Exception('Path ' . $pathQuery . ' must exist');
         }
@@ -370,7 +370,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function exists(string $pathQuery): bool
     {
-        $this->processPathQuery($this->cleanQuery($pathQuery));
+        $this->processPathQuery($pathQuery);
         return $this->getExists();
     }
 
@@ -407,7 +407,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function unset(string $pathQuery): self
     {
-        $pathQuery = $this->cleanQuery($pathQuery);
+        $pathQuery = $this->normalizePath($pathQuery);
         if ($pathQuery === '') {
             $this->setData(null);
         }
@@ -448,7 +448,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function parentPath(string $pathQuery): string
     {
-        $parentParts = explode($this->getDelimiter(), $this->cleanQuery($pathQuery));
+        $parentParts = explode($this->getDelimiter(), $this->normalizePath($pathQuery));
         $elementCount = count($parentParts);
         if ($elementCount == 1) {
             return $this->getRootSymbol();

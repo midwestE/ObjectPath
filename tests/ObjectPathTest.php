@@ -97,9 +97,30 @@ class ObjectPathTest extends TestCase
         $this->assertSame($enum, $form);
     }
 
+    public function testCacheSubItems()
+    {
+        $o = $this->objectPath();
+
+        $o->set('schema.title', 'New Title', true);
+        $this->assertTrue($o->isCached('schema'));
+
+        $schema = $o->{'schema'};
+        $this->assertEquals($schema->title, 'New Title');
+
+        $o->set('schema.title', 'Changed Title', true);
+        $schema = $o->{'schema'};
+        $this->assertEquals($schema->title, 'Changed Title');
+    }
+
     public function testSetMustExist()
     {
         $o = $this->objectPath();
+
+        $o->set('schema.title', 'New Title', true);
+
+
+        //$o->set('schema.another.key', 'New Title', false);
+        //$this->assertEquals($o->{'schema.another.key'}, 'New Title');
 
         $this->expectException(\Throwable::class);
         $o->set('fakekey', 'value', true);
