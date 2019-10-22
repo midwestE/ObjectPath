@@ -80,7 +80,10 @@ class ObjectPath implements \JsonSerializable
      */
     public function __set(string $pathQuery, $value): self
     {
-        return $this->set($pathQuery, $value, false);
+        if (!$this->exists($pathQuery)) {
+            throw new \Exception('Path ' . $pathQuery . ' must exist to use =>{\'my.path\'} format.  Use ->set($path, $value, false) to override');
+        }
+        return $this->set($pathQuery, $value, true);
     }
     /**
      * Magic method isset
@@ -282,47 +285,49 @@ class ObjectPath implements \JsonSerializable
         $workingPaths = [];
         $null = null;
         foreach ($paths as $path) {
-            $exists = false;
+            $workingPaths[] = $path;
+            $workingPath = implode($this->getDelimiter(), $workingPaths);
             if (is_array($data)) {
                 if (!isset($data[$path]) && substr($path, 0, 1) == '{' && substr($path, -1) == '}') {
                     // by array value
                     $path = array_search(str_replace(['{', '}'], '', $path), $data);
-                    $exists = ($path !== false);
-                    if (!$exists && !$set) {
-                        $this->setExists(false);
-                        return $null;
+                    if ($path === false) {
+                        if (!$set) {
+                            $this->setExists(false)->unsetCache($workingPath);
+                            return $null;
+                        }
+                        $data[$path] = [];
                     }
                     $data = &$data[$path];
-                    $exists = false;  // item no longer exists after being set
+                    $this->setExists(true)->unsetCache($workingPath);
                 } else {
                     // by array index
-                    $exists = isset($data[$path]);
-                    if (!$exists && !$set) {
-                        $this->setExists(false);
-                        return $null;
+                    if (!isset($data[$path])) {
+                        if (!$set) {
+                            $this->setExists(false)->unsetCache($workingPath);
+                            return $null;
+                        }
+                        $data[$path] = [];
                     }
                     $data = &$data[$path];
+                    $this->setExists(true)->setCache($workingPath, $data);
                 }
             } elseif (is_object($data)) {
                 // by object property
-                $exists = isset($data->{$path});
-                if (!$exists && !$set) {
-                    $this->setExists(false);
-                    return $null;
+                if (!isset($data->{$path})) {
+                    if (!$set) {
+                        $this->setExists(false)->unsetCache($workingPath);
+                        return $null;
+                    }
+                    $data->{$path} =  new \stdClass();
                 }
                 $data = &$data->{$path};
+                $this->setExists(true)->setCache($workingPath, $data);
             } else {
-                $this->setExists(false);
+                $this->setExists(false)->unsetCache($workingPath);
                 return $null;
             }
-            $this->setExists($exists);
-
-            $workingPaths[] = $path;
-            $workingPath = implode($this->getDelimiter(), $workingPaths);
-            ($exists) ? $this->setCache($workingPath, $data) : $this->unsetCache($workingPath);
         }
-        //$this->setExists($exists);
-        //($exists) ? $this->setCache($pathQuery, $data) : $this->unsetCache($pathQuery);
         return $data;
     }
 
@@ -349,7 +354,7 @@ class ObjectPath implements \JsonSerializable
      * @param  bool $mustExist
      * @return \self
      */
-    public function set(string $pathQuery, $value, bool $mustExist = false): self
+    public function set(string $pathQuery, $value, bool $mustExist = true): self
     {
         if ($mustExist && !$this->exists($pathQuery)) {
             throw new \Exception('Path ' . $pathQuery . ' must exist');
@@ -363,7 +368,6 @@ class ObjectPath implements \JsonSerializable
 
     /**
      * Check if an object element exists at the given path
-     * TODO Fix exists check adding to object if item doesn't exist
      *
      * @param  string $pathQuery
      * @return bool

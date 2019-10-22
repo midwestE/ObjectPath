@@ -71,7 +71,7 @@ class ObjectPathTest extends TestCase
             '2' => 'string'
         ];
 
-        $o->set('enum', $object);
+        $o->set('enum', $object, false);
         $enum = $o->get('enum');
         $this->assertSame($enum, $object);
 
@@ -90,7 +90,7 @@ class ObjectPathTest extends TestCase
             '2' => 'string'
         ];
 
-        $o->set('enum', $object);
+        $o->set('enum', $object, false);
         $enum = $o->get('enum');
         $o->{'form'} = $object;
         $form = $o->{'form'};
@@ -115,15 +115,34 @@ class ObjectPathTest extends TestCase
     public function testSetMustExist()
     {
         $o = $this->objectPath();
-
         $o->set('schema.title', 'New Title', true);
-
-
-        //$o->set('schema.another.key', 'New Title', false);
-        //$this->assertEquals($o->{'schema.another.key'}, 'New Title');
 
         $this->expectException(\Throwable::class);
         $o->set('fakekey', 'value', true);
+
+        $this->expectException(\Throwable::class);
+        $o->set('schema.this.that.otherthing', 'value', true);
+    }
+
+    public function testSetNonExisting()
+    {
+        $o = $this->objectPath();
+        $o->set('schema.another.key', 'New Title', false);
+        $this->assertEquals($o->{'schema.another.key'}, 'New Title');
+        $o->{'schema.another.key'} = 'New Title 2';
+        $this->assertEquals($o->{'schema.another.key'}, 'New Title 2');
+
+        $o = $this->objectPath();
+        $o->set('schema.properties.language.enum.newArray', ['this', 'that'], false);
+        $this->assertEquals($o->{'schema.properties.language.enum.newArray'}, ['this', 'that']);
+        $o->{'schema.properties.language.enum.newArray'} = ['that', 'otherThing'];
+        $this->assertEquals($o->{'schema.properties.language.enum.newArray'}, ['that', 'otherThing']);
+
+        $o = $this->objectPath();
+        $o->set('schema.properties.language.enum.{English}', ['this', 'that'], false);
+        $this->assertEquals($o->{'schema.properties.language.enum.0'}, ['this', 'that']);
+        $o->{'schema.properties.language.enum.0'} = ['that', 'otherThing'];
+        $this->assertEquals($o->{'schema.properties.language.enum.0'}, ['that', 'otherThing']);
     }
 
     public function testSetArrayValue()
@@ -271,8 +290,8 @@ class ObjectPathTest extends TestCase
         $this->assertSame($null1, $null2);
 
         // set items and make sure null reference is detached
-        $o->{'schema.value1'} = 'value1';
-        $o->{'schema.value2'} = 'value2';
+        $o->set('schema.value1', 'value1', false);
+        $o->set('schema.value2', 'value2', false);
         $this->assertNotSame($o->{'schema.value1'}, $o->{'schema.value2'});
 
         // set value1 to value2
