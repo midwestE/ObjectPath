@@ -71,6 +71,7 @@ class ObjectPath implements \JsonSerializable
 
     /**
      * Syntactic sugar for set() method. The starting '$' is not needed (implicit)
+     * Allows setting values that do not exist.  Use ->set method for protected set
      * Usage: $obj->{'.json.path'} = $value or $obj->{'json.path'} = $value;
      *
      * @param string $pathQuery jsonPath
@@ -80,10 +81,7 @@ class ObjectPath implements \JsonSerializable
      */
     public function __set(string $pathQuery, $value): self
     {
-        if (!$this->exists($pathQuery)) {
-            throw new \Exception('Path ' . $pathQuery . ' must exist to use =>{\'my.path\'} format.  Use ->set($path, $value, false) to override');
-        }
-        return $this->set($pathQuery, $value, true);
+        return $this->set($pathQuery, $value, false);
     }
     /**
      * Magic method isset
